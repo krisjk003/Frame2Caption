@@ -5,7 +5,6 @@
 """
 from __future__ import annotations
 
-import dataclasses
 import logging
 from pathlib import Path
 
@@ -31,14 +30,32 @@ class CaptionPipeline:
         self._logger = logger or logging.getLogger(__name__)
         self._client = gemini_client or GeminiClient(config, logger=self._logger)
 
-    def run(self, video_path: Path) -> PipelineResult:
+    def run(
+        self,
+        video_path: Path,
+        styles: list[str] | None = None,
+    ) -> PipelineResult:
         """Run the full pipeline for a single video and persist the result.
 
         Args:
             video_path: Path to a local video file (30s-2min by default).
+            styles: Optional subset of caption styles the caller is
+                interested in (e.g. a hackathon-evaluator task's
+                ``"styles"`` field). This does NOT change what Gemini
+                generates: the rewrite prompt always produces all four
+                canonical styles in one structured call, and
+                :class:`~src.models.CaptionSet` / ``validate_caption_schema``
+                always require all four to be present — that business
+                logic and prompt design are unchanged. ``styles`` is
+                accepted here purely so the caller's request is visible to
+                the pipeline for logging; callers that need only a subset
+                of styles should filter ``result.captions.to_dict()``
+                themselves (see ``src/task_runner.py``). Passing ``None``
+                (the default) or an empty list behaves exactly as before.
 
         Returns:
-            The completed :class:`PipelineResult`.
+            The completed :class:`PipelineResult` (always containing all
+            four caption styles).
 
         Raises:
             VideoValidationError: If the input video fails validation.
@@ -50,6 +67,8 @@ class CaptionPipeline:
         """
 
         self._logger.info("Starting captioning pipeline for: %s", video_path)
+        if styles:
+            self._logger.info("Caller requested caption styles: %s", ", ".join(styles))
 
         video_metadata = validate_video(video_path, self._config)
         self._logger.info(
@@ -77,8 +96,7 @@ class CaptionPipeline:
             model_name=self._config.model_name,
         )
 
-        json_path, txt_path = self._save_outputs(result)
-        result = dataclasses.replace(result, json_path=json_path, txt_path=txt_path)
+        #self._save_outputs(result)
         self._logger.info("Pipeline completed successfully.")
         return result
 

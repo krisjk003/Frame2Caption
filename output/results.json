@@ -1,0 +1,11 @@
+[
+  {
+    "task_id": "test1",
+    "captions": {
+      "formal": "The video features three performers on a stage with a rustic house backdrop, including a woman and two men. All performers are observed speaking into microphones and engaging in expressive, animated gestures, with one man consistently displaying a slightly frustrated demeanor. A \"SONY SAB TELEVISION\" logo is visible throughout.",
+      "sarcastic": "Behold the captivating saga of three performers on a SONY SAB stage, deeply engrossed in speaking into microphones and, of course, gesturing. One gentleman, in particular, masters the art of maintaining a 'slightly frustrated' look, providing a truly dynamic emotional arc.",
+      "humorous_tech": "Looks like the UI on this SONY SAB stage is processing some serious emotional data! With ear mics hot, these performers are in full debug mode, showcasing animated gesture protocols and a persistent 'frustration' state. Must be a bug in the live performance build.",
+      "humorous_non_tech": "On a SONY SAB stage with a charming rustic set, three performers are really giving their hands a workout, speaking into mics and emoting. One guy, though, looks like he's been stuck in traffic for hours or just saw his phone bill, maintaining a perfect 'slightly frustrated' vibe."
+    }
+  }
+]

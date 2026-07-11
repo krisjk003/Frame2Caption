@@ -1,146 +1,51 @@
 #!/usr/bin/env python3
-"""Command-line entry point for the AI video captioning pipeline.
+"""Docker entry point for the Frame2Caption hackathon-evaluator interface.
 
-Generates four styled captions (formal, sarcastic, humorous-tech,
-humorous-non-tech) for a short video using Gemini 2.5 Flash, driven
-entirely by prompt engineering (no fine-tuning or training).
+On startup this reads every task from /input/tasks.json, runs each one
+through the existing (unmodified) captioning pipeline, and writes
+/output/results.json. Kept intentionally tiny — all orchestration lives in
+src/task_runner.py; all caption-generation logic is untouched in
+src/caption_pipeline.py and src/gemini_client.py.
 
-Usage:
-    python app.py --video sample.mp4
-    python app.py --video sample.mp4 --output-dir results --log-level DEBUG
-    python app.py --video sample.mp4 --keep-remote-file
+Usage (inside the container):
+    python app.py
+
+No CLI arguments are read or required.
 """
 from __future__ import annotations
 
-import argparse
 import sys
-from pathlib import Path
-from typing import Any
 
-from config import Config, ConfigError
-from src.caption_pipeline import CaptionPipeline
+from config import ConfigError
 from src.logger import setup_logger
-from src.presenter import print_captions
-from src.utils import (
-    CaptionValidationError,
-    GeminiAPIError,
-    UploadTimeoutError,
-    VideoValidationError,
-)
+from src.task_runner import run_tasks
 
 EXIT_OK = 0
 EXIT_UNEXPECTED_ERROR = 1
 EXIT_CONFIG_ERROR = 2
-EXIT_VIDEO_ERROR = 3
-EXIT_TIMEOUT_ERROR = 4
-EXIT_CAPTION_ERROR = 5
-EXIT_GEMINI_ERROR = 6
+EXIT_TASKS_ERROR = 3
 
 
-def _build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="app.py",
-        description=(
-            "Generate formal, sarcastic, humorous-tech, and "
-            "humorous-non-tech captions for a short video using Gemini 2.5 "
-            "Flash and prompt engineering (no fine-tuning)."
-        ),
-    )
-    parser.add_argument(
-        "--video",
-        required=True,
-        type=Path,
-        help="Path to the input video file (30 seconds to 2 minutes long).",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=None,
-        help="Override the output directory (default: outputs/).",
-    )
-    parser.add_argument(
-        "--log-level",
-        default=None,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Override the log level (default: from .env or INFO).",
-    )
-    parser.add_argument(
-        "--keep-remote-file",
-        action="store_true",
-        help="Do not delete the uploaded video from Gemini's File API "
-        "after the run completes.",
-    )
-    parser.add_argument(
-        "--raw-json",
-        action="store_true",
-        help="Print the raw captions JSON to stdout instead of the "
-        "formatted report (useful for piping into other tools).",
-    )
-    parser.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Disable ANSI colors in the formatted report.",
-    )
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = _build_arg_parser()
-    args = parser.parse_args(argv)
+def main() -> int:
+    logger = setup_logger()
 
     try:
-        config = Config.from_env()
+        output_path = run_tasks()
     except ConfigError as exc:
+        logger.error("Configuration error: %s", exc)
         print(f"[CONFIG ERROR] {exc}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
-
-    overrides: dict[str, Any] = {}
-    if args.output_dir is not None:
-        overrides["output_dir"] = args.output_dir
-        overrides["log_dir"] = args.output_dir / "logs"
-    if args.log_level is not None:
-        overrides["log_level"] = args.log_level
-    if args.keep_remote_file:
-        overrides["keep_remote_file"] = True
-    if overrides:
-        try:
-            config = config.with_overrides(**overrides)
-        except ConfigError as exc:
-            print(f"[CONFIG ERROR] {exc}", file=sys.stderr)
-            return EXIT_CONFIG_ERROR
-
-    config.output_dir.mkdir(parents=True, exist_ok=True)
-    logger = setup_logger(level=config.log_level, log_dir=config.log_dir)
-
-    pipeline = CaptionPipeline(config, logger=logger)
-
-    try:
-        result = pipeline.run(args.video)
-    except VideoValidationError as exc:
-        logger.error("Video validation failed: %s", exc)
-        print(f"[VIDEO ERROR] {exc}", file=sys.stderr)
-        return EXIT_VIDEO_ERROR
-    except UploadTimeoutError as exc:
-        logger.error("Upload/processing timed out: %s", exc)
-        print(f"[TIMEOUT ERROR] {exc}", file=sys.stderr)
-        return EXIT_TIMEOUT_ERROR
-    except CaptionValidationError as exc:
-        logger.error("Caption generation failed validation: %s", exc)
-        print(f"[CAPTION ERROR] {exc}", file=sys.stderr)
-        return EXIT_CAPTION_ERROR
-    except GeminiAPIError as exc:
-        logger.error("Gemini API error: %s", exc)
-        print(f"[GEMINI ERROR] {exc}", file=sys.stderr)
-        return EXIT_GEMINI_ERROR
+    except (FileNotFoundError, ValueError) as exc:
+        # Malformed or missing /input/tasks.json.
+        logger.error("Tasks file error: %s", exc)
+        print(f"[TASKS ERROR] {exc}", file=sys.stderr)
+        return EXIT_TASKS_ERROR
     except Exception as exc:  # noqa: BLE001 - top-level safety net
-        logger.exception("Unexpected error while running the pipeline.")
+        logger.exception("Unexpected error while running tasks.")
         print(f"[UNEXPECTED ERROR] {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
-    if args.raw_json:
-        print(result.captions.to_json())
-    else:
-        print_captions(result, use_color=(False if args.no_color else None))
+    logger.info("Done. Results written to: %s", output_path)
     return EXIT_OK
 
 
