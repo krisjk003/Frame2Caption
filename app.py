@@ -20,6 +20,7 @@ from typing import Any
 from config import Config, ConfigError
 from src.caption_pipeline import CaptionPipeline
 from src.logger import setup_logger
+from src.presenter import print_captions
 from src.utils import (
     CaptionValidationError,
     GeminiAPIError,
@@ -69,14 +70,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Do not delete the uploaded video from Gemini's File API "
         "after the run completes.",
     )
+    parser.add_argument(
+        "--raw-json",
+        action="store_true",
+        help="Print the raw captions JSON to stdout instead of the "
+        "formatted report (useful for piping into other tools).",
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI colors in the formatted report.",
+    )
     return parser
-
-
-def _print_result(captions_json: str) -> None:
-    banner = "=" * 70
-    print(f"\n{banner}\nCAPTIONS GENERATED\n{banner}")
-    print(captions_json)
-    print(f"{banner}\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -132,7 +137,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[UNEXPECTED ERROR] {exc}", file=sys.stderr)
         return EXIT_UNEXPECTED_ERROR
 
-    _print_result(result.captions.to_json())
+    if args.raw_json:
+        print(result.captions.to_json())
+    else:
+        print_captions(result, use_color=(False if args.no_color else None))
     return EXIT_OK
 
 

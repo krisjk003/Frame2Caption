@@ -92,6 +92,11 @@ class PipelineResult:
             timespec="seconds"
         )
     )
+    # Populated after the JSON/TXT report is written to disk (see
+    # CaptionPipeline._save_outputs). Not part of the persisted JSON/TXT
+    # content itself -- purely for the console report to point at.
+    json_path: Path | None = None
+    txt_path: Path | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {

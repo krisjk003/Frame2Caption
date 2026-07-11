@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 from pathlib import Path
 
@@ -76,7 +77,8 @@ class CaptionPipeline:
             model_name=self._config.model_name,
         )
 
-        self._save_outputs(result)
+        json_path, txt_path = self._save_outputs(result)
+        result = dataclasses.replace(result, json_path=json_path, txt_path=txt_path)
         self._logger.info("Pipeline completed successfully.")
         return result
 
