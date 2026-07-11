@@ -250,11 +250,6 @@ docker run --rm \
 - Fully compatible with Docker-based batch evaluation.
 - Designed to process multiple tasks sequentially from a single input file.
 
----
-
-# 📄 License
-
-This project is released under the MIT License.
 
 ---
 
