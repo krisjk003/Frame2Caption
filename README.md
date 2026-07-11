@@ -1,48 +1,89 @@
 # 🎬 Frame2Caption
 
-**Frame2Caption** is a modular AI-powered video captioning system that generates four distinct caption styles from short videos using **Google Gemini 2.5 Flash** and **prompt engineering**—without fine-tuning.
+> AI-powered video captioning agent that generates multiple caption styles from short videos using **Google Gemini 2.5 Flash**.
 
-Built for multimodal AI applications and hackathons, the project processes videos end-to-end and produces captions tailored to different audiences.
+Frame2Caption is a modular multimodal AI pipeline built for automated video caption generation. Given a video, it produces captions in four distinct styles while maintaining factual consistency with the video content.
+
+Designed for the **AMD Developer Hackathon – Track 2**, the project follows a Docker-based batch processing architecture, making it suitable for automated evaluation as well as local development.
 
 ---
 
-## ✨ Features
+# ✨ Features
 
-- 🎥 Accepts short MP4 videos (10 seconds – 2 minutes)
-- 🧠 Uses Gemini 2.5 Flash for multimodal understanding
-- ✍️ Generates four caption styles:
+- 🎥 Processes videos from **30 seconds to 2 minutes**
+- 🧠 Uses **Google Gemini 2.5 Flash** for multimodal video understanding
+- ✍️ Generates four caption styles
   - Formal
   - Sarcastic
   - Humorous-Tech
   - Humorous-Non-Tech
-- 🔄 Modular pipeline with reusable components
-- ⚡ Automatic retries and robust error handling
-- 📄 Saves generated captions as structured JSON
+- 📦 Docker-compatible batch processing
+- 🌐 Supports both
+  - Local video files
+  - Remote video URLs
+- 🔄 Automatic retries and robust error handling
+- 📄 Produces evaluator-compatible JSON output
+- 🏗 Modular, reusable architecture
 
 ---
 
-## 📂 Project Structure
+# 📂 Project Structure
 
 ```text
 Frame2Caption/
-├── prompts/          # Prompt templates
-├── sample_videos/    # Sample videos
-├── src/              # Core pipeline
-│   ├── caption_pipeline.py
-│   ├── gemini_client.py
-│   ├── logger.py
-│   ├── models.py
-│   ├── utils.py
-│   └── video_utils.py
+│
 ├── app.py
 ├── config.py
+├── Dockerfile
 ├── requirements.txt
+│
+├── prompts/
+│
+├── src/
+│   ├── caption_pipeline.py
+│   ├── downloader.py
+│   ├── gemini_client.py
+│   ├── io.py
+│   ├── logger.py
+│   ├── models.py
+│   ├── task_runner.py
+│   ├── utils.py
+│   └── video_utils.py
+│
+├── input/
+├── output/
+├── sample_videos/
 └── README.md
 ```
 
 ---
 
-## 🚀 Installation
+# ⚙️ Architecture
+
+```text
+                app.py
+                   │
+                   ▼
+            Task Runner
+                   │
+      ┌────────────┴────────────┐
+      ▼                         ▼
+ Video Downloader        Caption Pipeline
+                                │
+                ┌───────────────┴───────────────┐
+                ▼                               ▼
+          Video Validation             Gemini 2.5 Flash
+                                                │
+                                                ▼
+                                   Caption Generation
+                                                │
+                                                ▼
+                                   output/results.json
+```
+
+---
+
+# 🚀 Installation
 
 Clone the repository
 
@@ -65,7 +106,7 @@ Activate it
 .venv\Scripts\activate
 ```
 
-### Linux/macOS
+### Linux / macOS
 
 ```bash
 source .venv/bin/activate
@@ -79,7 +120,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🔑 Configuration
+# 🔑 Configuration
 
 Create a `.env` file in the project root.
 
@@ -89,48 +130,136 @@ GEMINI_API_KEY=YOUR_API_KEY
 
 ---
 
-## ▶️ Usage
+# ▶️ Local Usage
 
-Run the caption generator
+Create
 
-```bash
-python app.py --video sample_videos/video.mp4
+```text
+input/tasks.json
 ```
 
-Or specify a custom output directory
-
-```bash
-python app.py --video sample_videos/video.mp4 --output-dir outputs
-```
-
----
-
-## 📤 Example Output
+Example
 
 ```json
-{
-  "formal": "...",
-  "sarcastic": "...",
-  "humorous_tech": "...",
-  "humorous_non_tech": "..."
-}
+[
+  {
+    "task_id": "test1",
+    "video_url": "sample_videos/video.mp4",
+    "styles": [
+      "formal",
+      "sarcastic",
+      "humorous_tech",
+      "humorous_non_tech"
+    ]
+  }
+]
+```
+
+Run
+
+```bash
+python app.py
+```
+
+Generated output
+
+```text
+output/results.json
 ```
 
 ---
 
-## ⚙️ Technologies
+# 🐳 Docker Usage
+
+Build
+
+```bash
+docker build -t frame2caption .
+```
+
+Run
+
+```bash
+docker run --rm \
+    -e GEMINI_API_KEY=YOUR_API_KEY \
+    -v $(pwd)/input:/input \
+    -v $(pwd)/output:/output \
+    frame2caption
+```
+
+---
+
+# 📤 Output Format
+
+```json
+[
+  {
+    "task_id": "test1",
+    "captions": {
+      "formal": "...",
+      "sarcastic": "...",
+      "humorous_tech": "...",
+      "humorous_non_tech": "..."
+    }
+  }
+]
+```
+
+---
+
+# 🛠 Tech Stack
 
 - Python 3.10+
 - Google Gemini 2.5 Flash
 - Prompt Engineering
+- Requests
 - python-dotenv
+- Docker
 
 ---
 
-## 📌 Notes
+# 📋 Pipeline
 
-- No model fine-tuning is used.
-- Caption quality is achieved through prompt engineering.
-- Supports videos between 10 seconds and 2 minutes.
+1. Read task list
+2. Download or locate the video
+3. Validate video metadata
+4. Upload video to Gemini
+5. Wait until processing completes
+6. Generate a factual video summary
+7. Rewrite into four caption styles
+8. Save evaluator-compatible JSON output
 
 ---
+
+# 🎯 Supported Caption Styles
+
+| Style | Description |
+|--------|-------------|
+| Formal | Professional, objective and factual |
+| Sarcastic | Dry, ironic and lightly mocking |
+| Humorous-Tech | Technology/programming themed humor |
+| Humorous-Non-Tech | Everyday humor without technical references |
+
+---
+
+# 📌 Notes
+
+- No model fine-tuning is performed.
+- Caption quality is achieved entirely through prompt engineering.
+- Supports both local videos and remote URLs.
+- Fully compatible with Docker-based batch evaluation.
+- Designed to process multiple tasks sequentially from a single input file.
+
+---
+
+# 📄 License
+
+This project is released under the MIT License.
+
+---
+
+# 👨‍💻 Author
+
+**Jyothish Kumar JS**
+
+GitHub: https://github.com/krisjk003
