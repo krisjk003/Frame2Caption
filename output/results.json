@@ -1,11 +1,6 @@
 [
   {
     "task_id": "test1",
-    "captions": {
-      "formal": "Three performers engage in a comedic sketch on a stage featuring a rural house backdrop and hay bales, with a 'SONY ENTERTAINMENT TELEVISION' logo present. The video transitions between a wide shot and close-ups of the animated participants.",
-      "sarcastic": "An 'expressive act' unfolds on a stage, featuring three performers engaged in animated gestures and speech. Clearly, SONY ENTERTAINMENT TELEVISION is redefining subtle performance art with this comedic sketch.",
-      "humorous_tech": "SONY ENTERTAINMENT TELEVISION is clearly pushing the limits of human-computer interaction with this expressive act. The middle performer's frustration metrics are off the charts, and the woman's gesture-based input system is highly animated.",
-      "humorous_non_tech": "This expressive act on SONY ENTERTAINMENT TELEVISION looks like a very animated debate, probably about something crucial like why the stage hay bales aren't real. The middle man's expression is a whole mood."
-    }
+    "error": "cannot schedule new futures after interpreter shutdown"
   }
 ]
